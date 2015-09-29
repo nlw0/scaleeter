@@ -1,8 +1,7 @@
 /** Versão sofisticada, com um pouco de OO. As classes `Tweet`e `Word` permitem fazer contas mais detalhadas do
   * tamanho do tweet, e em especial permitem aqui considerar que URLs são encurtadas, consumindo apenas 23 caracteres.
   */
-
-object ScaleeterC extends App {
+object ScaleeterD extends App {
 
   case class Word(value: String) {
     val urlRegex =
@@ -47,15 +46,43 @@ object ScaleeterC extends App {
     }
   }
 
+  def dfsTweetPaginate(words: List[Word], page: Int, total: Int): (Int, List[Tweet]) = {
+    if (page == total) {
+      val finalTweet = words.foldLeft(Tweet(page, total)) { (a, b) => a :+ b }
+      (finalTweet.length, List(finalTweet))
+    } else {
+      (1 to words.length).iterator map {
+        n =>
+          val (hereWords, thereWords) = words.splitAt(n)
+          val thisTweet = hereWords.foldLeft(Tweet(page, total)) { (a, b) => a :+ b }
+          (thisTweet, thereWords)
+      } takeWhile {
+        case (tw, ww) => tw.length <= TWEET_LENGTH
+      } map {
+        case (tw: Tweet, ww) =>
+          val below = dfsTweetPaginate(ww, page + 1, total)
+          (below._1 min tw.length, tw :: below._2)
+      } reduce {
+        (minTtA, minTtB) =>
+          if (minTtA._1 >= minTtB._1) minTtA else minTtB
+      }
+    }
+  }
+
   val input = io.Source.stdin.getLines()
 
-  val wordStream = input.flatMap(_.split("\\s+")).toVector map { ww => Word(ww) }
+  val wordStream = input.flatMap(_.split("\\s+")).toList map { ww => Word(ww) }
 
-  val tweets = generateTweets(wordStream)
+  val tweetsGreedy = generateTweets(wordStream)
+
+  val nTweets = tweetsGreedy.size
+
+  val tweetsOptim = dfsTweetPaginate(wordStream, 1, nTweets)
+  val tweets = tweetsOptim._2.reverse
 
   // tweets foreach { ss => println(ss.length + "\t" + ss) }
   tweets foreach println
-
+  //  println(tweetsOptim)
 }
 
-//ScaleeterC.main(args)
+ScaleeterD.main(args)
