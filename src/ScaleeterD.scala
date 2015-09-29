@@ -1,7 +1,9 @@
-/** Versão sofisticada, com um pouco de OO. As classes `Tweet`e `Word` permitem fazer contas mais detalhadas do
-  * tamanho do tweet, e em especial permitem aqui considerar que URLs são encurtadas, consumindo apenas 23 caracteres.
+/** Versão overkill. Após calcular o número de tweets necessários, rodar ainda uma DFS memoizada para encontrar a
+  * distribuição que maximiza o tamanho do menor tweet.
   */
 object ScaleeterD extends App {
+
+  val TWEET_LENGTH = 140
 
   case class Word(value: String) {
     val urlRegex =
@@ -22,8 +24,6 @@ object ScaleeterD extends App {
 
     lazy val length = header.length + 1 + contentLength
   }
-
-  val TWEET_LENGTH = 140
 
   @annotation.tailrec
   def generateTweets(input: Traversable[Word], total: Int = 0): List[Tweet] = {
@@ -46,26 +46,33 @@ object ScaleeterD extends App {
     }
   }
 
+  var memo: Map[(List[Word], Int), (Int, List[Tweet])] = Map()
+
+  def memoizing(words: List[Word], page: Int, output: (Int, List[Tweet])) = {
+    memo += (words, page) -> output
+    output
+  }
+
   def dfsTweetPaginate(words: List[Word], page: Int, total: Int): (Int, List[Tweet]) = {
-    if (page == total) {
+    if (memo contains(words, page))
+      memo((words, page))
+    else if (page == total) {
       val finalTweet = words.foldLeft(Tweet(page, total)) { (a, b) => a :+ b }
-      (finalTweet.length, List(finalTweet))
+      memoizing(words, page, (finalTweet.length, List(finalTweet)))
+
     } else {
-      (1 to words.length).iterator map {
-        n =>
-          val (hereWords, thereWords) = words.splitAt(n)
-          val thisTweet = hereWords.foldLeft(Tweet(page, total)) { (a, b) => a :+ b }
-          (thisTweet, thereWords)
-      } takeWhile {
-        case (tw, ww) => tw.length <= TWEET_LENGTH
-      } map {
-        case (tw: Tweet, ww) =>
-          val below = dfsTweetPaginate(ww, page + 1, total)
-          (below._1 min tw.length, tw :: below._2)
-      } reduce {
-        (minTtA, minTtB) =>
-          if (minTtA._1 >= minTtB._1) minTtA else minTtB
-      }
+      def branches = (1 to words.length).iterator map { n =>
+        val (hereWords, thereWords) = words.splitAt(n)
+        val thisTweet = hereWords.foldLeft(Tweet(page, total)) { (a, b) => a :+ b }
+        (thisTweet, thereWords)
+      } takeWhile { case (tw, ww) => tw.length <= TWEET_LENGTH }
+
+      val ans = branches map { case (tw, ww) =>
+        val below = dfsTweetPaginate(ww, page + 1, total)
+        (below._1 min tw.length, tw :: below._2)
+      } reduce { (minTtA, minTtB) => if (minTtA._1 >= minTtB._1) minTtA else minTtB }
+
+      memoizing(words, page, ans)
     }
   }
 
@@ -77,12 +84,10 @@ object ScaleeterD extends App {
 
   val nTweets = tweetsGreedy.size
 
-  val tweetsOptim = dfsTweetPaginate(wordStream, 1, nTweets)
-  val tweets = tweetsOptim._2.reverse
+  val tweetsOptimal = dfsTweetPaginate(wordStream, 1, nTweets)
+  val tweets = tweetsOptimal._2
 
-  // tweets foreach { ss => println(ss.length + "\t" + ss) }
   tweets foreach println
-  //  println(tweetsOptim)
 }
 
 ScaleeterD.main(args)

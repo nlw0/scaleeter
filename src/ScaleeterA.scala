@@ -17,4 +17,4 @@ object ScaleeterA extends App {
   generateTweets(input) foreach println
 }
 
-//ScaleeterA.main(args)
+ScaleeterA.main(args)

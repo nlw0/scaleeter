@@ -1,8 +1,9 @@
 /** Versão sofisticada, com um pouco de OO. As classes `Tweet`e `Word` permitem fazer contas mais detalhadas do
   * tamanho do tweet, e em especial permitem aqui considerar que URLs são encurtadas, consumindo apenas 23 caracteres.
   */
-
 object ScaleeterC extends App {
+
+  val TWEET_LENGTH = 140
 
   case class Word(value: String) {
     val urlRegex =
@@ -23,8 +24,6 @@ object ScaleeterC extends App {
 
     lazy val length = header.length + 1 + contentLength
   }
-
-  val TWEET_LENGTH = 140
 
   @annotation.tailrec
   def generateTweets(input: Traversable[Word], total: Int = 0): List[Tweet] = {
@@ -53,9 +52,7 @@ object ScaleeterC extends App {
 
   val tweets = generateTweets(wordStream)
 
-  // tweets foreach { ss => println(ss.length + "\t" + ss) }
   tweets foreach println
-
 }
 
-//ScaleeterC.main(args)
+ScaleeterC.main(args)

@@ -38,7 +38,6 @@ object ScaleeterB extends App {
   val tweets = generateTweets(wordStream)
 
   tweets foreach println
-
 }
 
-//ScaleeterB.main(args)
+ScaleeterB.main(args)
